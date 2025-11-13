@@ -1,149 +1,10 @@
-import functools
+from prompt_toolkit import PromptSession
+from typeahead import Typeahead
+from decorator import input_error
+from addressBook import AddressBook
+from contactRecord import Record
 import pickle
-from collections import UserDict
-from datetime import datetime, timedelta, date
 
-class Field:
-    def __init__(self, value):
-        self.__value = value.strip()
-
-    @property
-    def value(self):
-        return self.__value
-
-    @value.setter
-    def value(self, value):
-        self.__value = value
-
-    def __str__(self):
-        return str(self.value)
-
-class Name(Field):
-    pass
-
-class Birthday(Field):
-    def __init__(self, value):
-        try:
-            formatted_string = '%d.%m.%Y'
-            self.value = datetime.strptime(value, formatted_string).date()
-        except ValueError:
-            raise ValueError("Invalid date format. Use DD.MM.YYYY format for real calendar dates")
-
-class Phone(Field):
-    def __init__(self, value):
-        if isinstance(value, str) and value.isdigit() and len(value) == 10:
-            self.value = value
-        else:
-            raise ValueError("Phone number must be a 10-digit string")
-
-class Record:
-    def __init__(self, name):
-        self.name = Name(name)
-        self.phones = []
-        self.birthday = None
-
-    def add_birthday(self, birhday_string):
-        self.birthday = Birthday(birhday_string)
-
-    def show_birthday(self):
-        return self.birthday
-
-    def add_phone(self, phone_number):
-        phone_num_act = Phone(phone_number)
-        self.phones.append(phone_num_act)
-    
-    def find_phone(self, phone):
-        for phone_obj in self.phones:
-            if phone_obj.value == phone:
-                return phone_obj
-
-    def edit_phone(self, old_phone, new_phone):
-        phone_obj_to_edit = self.find_phone(old_phone)
-        if phone_obj_to_edit:
-            phone_obj_to_edit.value = new_phone
-        else:
-            raise ValueError(f"Phone number '{old_phone}' not found for editing within '{self.name}' record")
-    
-    def remove_phone(self, phone_num):
-        phone_obj_to_remove = self.find_phone(phone_num)
-        if phone_obj_to_remove:
-            self.phones.remove(phone_obj_to_remove)
-        else:
-            raise ValueError(f"Phone number '{phone_num}' not found in record for {self.name}.")
-
-    def __str__(self):
-        phones_str = '; '.join(p.value for p in self.phones)
-        if self.birthday is not None:
-            return f"Contact name: {self.name.value}, phones: {phones_str}, birthday: {self.birthday.value.strftime('%d.%m.%Y')}"
-        else:
-            return f"Contact name: {self.name.value}, phones: {phones_str}, birthday: {self.birthday}"
-
-class AddressBook(UserDict):
-    def add_record(self, record):
-        if isinstance(record, Record):
-            self.data[record.name.value] = record
-        else:
-            raise TypeError("Only Record objects can be added to AddressBook.")
-        
-    def find(self, name):
-        return self.data.get(name)
-    
-    def delete(self, name):
-        if name in self.data:
-            del self.data[name]
-        else:
-            raise KeyError(f"Contact '{name}' not found in the address book.")
-    
-    def get_upcoming_birthdays(self):
-        today = date.today()
-        upcoming_birthdays = []
-        try:
-            for name, record in self.data.items():
-                if record.birthday is not None:
-                    # Replace year with the current year
-                    birthday_this_year = record.birthday.value.replace(year=today.year)
-
-                    # If birthday already passed this year, use next year
-                    if birthday_this_year < today:
-                        birthday_this_year = birthday_this_year.replace(year=today.year + 1)
-
-                    # If birthday is on weekend, move to next Monday
-                    if birthday_this_year.weekday() == 5:  # Saturday
-                        birthday_this_year += timedelta(days=2)
-                    elif birthday_this_year.weekday() == 6:  # Sunday
-                        birthday_this_year += timedelta(days=1)
-                    
-                    # Check if the (possibly shifted) date is within the next 7 days
-                    if 0 <= (birthday_this_year - today).days <= 7:
-                        upcoming_birthdays.append({
-                            "name": name,
-                            "original_birthday": record.birthday.value.strftime("%d.%m.%Y"),
-                            "congratulation_date": birthday_this_year.strftime("%d.%m.%Y")
-                        })
-                
-            if len(upcoming_birthdays) == 0:
-                return 'There is no one to congratulate in next 7 days'
-            else:
-                sorted_upcoming_birthdays = sorted(upcoming_birthdays, key=lambda x: x['congratulation_date'])
-                return sorted_upcoming_birthdays  
-        except ValueError:
-            raise ValueError(f"Wrong incoming data, please check your adressbook")
-
-def input_error(func):
-    """
-    Decorator for caching user's input errors like KeyError, ValueError, IndexError
-    """
-    @functools.wraps(func)
-    def inner(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except ValueError:
-            return "Wrong parameters are provided, please try again with valid data"
-        except KeyError:
-            return "Contact not found."
-        except IndexError:
-            return "Enter user name."
-    return inner
 
 @input_error
 def add_contact(args, book: AddressBook):
@@ -282,13 +143,41 @@ def load_data(filename="addressbook.pkl"):
 
 # --- MAIN ---
 
+commands = {
+        "hello": "Greet the user",
+        "close": "Exit the application",
+        "exit": "Exit the application",
+        "add_contact": "Add a contact",
+        "change_contact": "Modify a contact",
+        "phone": "Show the contact's phone number",
+        "all_contacts": "Show all contacts",
+        "add_birthday": "Add a birthday to a contact",
+        "show_birthday": "Show a contact's birthday",
+        "upcoming_birthdays": "Show upcoming birthdays",
+
+
+
+        "show_all_commands": "Show all commands",
+        "search_contacts": "Search for a contact",
+        "delete_contact": "Delete a contact",
+        "add_note": "Add a note",
+        "edit_note": "Edit a note",
+        "delete_note": "Delete a note",
+        "search_notes": "Search for a note",
+        "all_notes": "Show all notes",
+        # "add_tag": "Add a tag to a note",
+        # "remove_tag": "Remove a note's tag",
+    }
+
 def main():
     # load data on start
     book = load_data()
+    session = PromptSession()
+    completer = Typeahead(hints=commands.keys())
     print("Welcome to the assistant bot!")
 
     while True:
-        user_input = input("Enter a command: ")
+        user_input = session.prompt('Enter a command: ', completer=completer)
         command, args = parse_input(user_input)
 
         if command in ["close", "exit"]:
@@ -300,25 +189,25 @@ def main():
         elif command == "hello":
             print("How can I help you?")
             
-        elif command == "add":
+        elif command == "add_contact":
             print(add_contact(args, book))
             
-        elif command == "change":
+        elif command == "change_contact":
             print(change_contact(args, book))
             
         elif command == "phone":
             print(show_phone(args, book))
         
-        elif command == "all":
+        elif command == "all_contacts":
             print(show_all(book))
             
-        elif command == "add-birthday":
+        elif command == "add_birthday":
             print(add_birthday(args, book))
 
-        elif command == "show-birthday":
+        elif command == "show_birthday":
             print(show_birthday(args, book))
 
-        elif command == "birthdays":
+        elif command == "upcoming_birthdays":
             result = birthdays(book)
             if isinstance(result, list):
                 print("Congratulations list for next seven days:")
@@ -333,5 +222,5 @@ def main():
         else:
             print("Invalid command.")
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+main()
