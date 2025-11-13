@@ -19,9 +19,9 @@ commands = {
         "upcoming_birthdays": "Show upcoming birthdays",
         "help": "Show all commands",
         "search_contact": "Search for a contact",
+        "delete_contact": "Delete a contact",
 
         
-        "delete_contact": "Delete a contact",
         "add_note": "Add a note",
         "edit_note": "Edit a note",
         "delete_note": "Delete a note",
@@ -76,6 +76,16 @@ def change_contact(args, book: AddressBook):
             return "New number must has 10 digits"
     else:
         return "There is no such Contact in your book" 
+    
+@input_error
+def delete_contact(args, book:AddressBook):
+    name = args[0]
+    record:Record = book.find(name.title())
+    if record is None:
+        return f"There is no {name.title()} in your book"
+    else:
+        del book[name.title()]
+        return f"{name.title()} was deleted from your book"
 
 @input_error
 def show_phone(args, book: AddressBook):
@@ -244,6 +254,9 @@ def main():
         
         elif command == "all_contacts":
             print(show_all(book))
+
+        elif command =="delete_contact":
+            print(delete_contact(args, book))
             
         elif command == "add_birthday":
             print(add_birthday(args, book))
