@@ -6,6 +6,41 @@ from contactRecord import Record
 import pickle
 
 
+commands = {
+        "hello": "Greet the user",
+        "close": "Exit the application",
+        "exit": "Exit the application",
+        "add_contact": "Add a contact",
+        "change_contact": "Modify a contact",
+        "phone": "Show the contact's phone number",
+        "all_contacts": "Show all contacts",
+        "add_birthday": "Add a birthday to a contact",
+        "show_birthday": "Show a contact's birthday",
+        "upcoming_birthdays": "Show upcoming birthdays",
+        "help": "Show all commands",
+        "search_contact": "Search for a contact",
+
+        
+        "delete_contact": "Delete a contact",
+        "add_note": "Add a note",
+        "edit_note": "Edit a note",
+        "delete_note": "Delete a note",
+        "search_notes": "Search for a note",
+        "all_notes": "Show all notes",
+        # "add_tag": "Add a tag to a note",
+        # "remove_tag": "Remove a note's tag",
+    }
+
+@input_error
+def search_contact(args, book: AddressBook):
+    name = args[0]
+    record: Record = book.find(name.title())
+    if record is None:
+        return f"There is no such contact in your book"
+    else:
+        return f"Here is what you have in your book -> {str(record)}"
+
+
 @input_error
 def add_contact(args, book: AddressBook):
     """
@@ -128,6 +163,39 @@ def parse_input(user_input):
     
     return cmd, args
 
+def show_help(commands_list):
+    """Display help with all commands, parameters, and descriptions."""
+    print("\n" + "=" * 70)
+    print("📚 Personal Assistant - Available Commands")
+    print("=" * 70)
+    for key,value in commands.items():
+        print(f"Command '{key}': {value}")
+    print("=" * 70)
+
+
+
+
+    # print("\n📞 Contact Management:")
+    # for cmd in Command.Contacts:
+    #     help_info = COMMAND_HELP[cmd]
+    #     print(help_info.format(cmd.value, width=45))
+
+    # print("\n📝 Note Management:")
+    # for cmd in Command.Notes:
+    #     help_info = COMMAND_HELP[cmd]
+    #     print(help_info.format(cmd.value, width=45))
+
+    # print("\n⚙️ General:")
+    # for cmd in Command.General:
+    #     help_info = COMMAND_HELP[cmd]
+    #     print(help_info.format(cmd.value, width=45))
+
+    # print("\n" + "=" * 70)
+    # print("Legend:")
+    # print("  <parameter>  Required parameter")
+    # print("  [parameter]  Optional parameter")
+    # print("=" * 70 + "\n")
+
 # --- Functions for saving and loading ---
 
 def save_data(book, filename="addressbook.pkl"):
@@ -143,40 +211,16 @@ def load_data(filename="addressbook.pkl"):
 
 # --- MAIN ---
 
-commands = {
-        "hello": "Greet the user",
-        "close": "Exit the application",
-        "exit": "Exit the application",
-        "add_contact": "Add a contact",
-        "change_contact": "Modify a contact",
-        "phone": "Show the contact's phone number",
-        "all_contacts": "Show all contacts",
-        "add_birthday": "Add a birthday to a contact",
-        "show_birthday": "Show a contact's birthday",
-        "upcoming_birthdays": "Show upcoming birthdays",
-
-
-
-        "show_all_commands": "Show all commands",
-        "search_contacts": "Search for a contact",
-        "delete_contact": "Delete a contact",
-        "add_note": "Add a note",
-        "edit_note": "Edit a note",
-        "delete_note": "Delete a note",
-        "search_notes": "Search for a note",
-        "all_notes": "Show all notes",
-        # "add_tag": "Add a tag to a note",
-        # "remove_tag": "Remove a note's tag",
-    }
-
 def main():
     # load data on start
     book = load_data()
     session = PromptSession()
     completer = Typeahead(hints=commands.keys())
     print("Welcome to the assistant bot!")
+    show_help(commands)
 
     while True:
+        
         user_input = session.prompt('Enter a command: ', completer=completer)
         command, args = parse_input(user_input)
 
@@ -215,6 +259,10 @@ def main():
                     print(contact)
             else:
                 print(result)
+        elif command == "help":
+            show_help(commands)
+        elif command == "search_contact":
+            print(search_contact(args, book))
             
         elif command is None:
             continue
